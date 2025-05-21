@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,13 +47,19 @@ public class PostServiceImpl implements PostService {
     @Override
     public PostDto updatePost(String id, NewPostDto newpostDto) {
         Post post = postRepository.findById(id).orElseThrow(PostNotFoundException::new);
-        if (newpostDto.getTitle() != null) {
-            post.setTitle(newpostDto.getTitle());
+        String content = newpostDto.getContent();
+        if (content != null) {
+            post.setContent(content);
         }
-        if (newpostDto.getContent() != null) {
-            post.setContent(newpostDto.getContent());
+        String title = newpostDto.getTitle();
+        if (title != null) {
+            post.setTitle(title);
         }
-        postRepository.save(post);
+        Set<String> tags = newpostDto.getTags();
+        if (tags != null) {
+            tags.forEach(post::addTag);
+        }
+        post = postRepository.save(post);
         return modelMapper.map(post, PostDto.class);
     }
 
@@ -75,22 +82,32 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Iterable<PostDto> findPostsByAuthor(String author) {
-        return postRepository.findByAuthorIgnoreCase(author).stream()
-                .map(post -> modelMapper.map(post, PostDto.class))
-                .collect(Collectors.toList());
+        return postRepository.findPostByAuthorIgnoreCase(author)
+                .map(post -> modelMapper.map(post,PostDto.class))
+                .toList();
+//        return postRepository.findByAuthorIgnoreCase(author).stream()
+//                .map(post -> modelMapper.map(post, PostDto.class))
+//                .collect(Collectors.toList());
     }
 
     @Override
     public Iterable<PostDto> findPostsByTags(List<String> tags) {
-        return postRepository.findByTagsIn(tags).stream()
+//        return postRepository.findByTagsIn(tags).stream()
+//                .map(post -> modelMapper.map(post, PostDto.class))
+//                .collect(Collectors.toList());
+        return postRepository.findPostsByTagsInIgnoreCase(tags)
                 .map(post -> modelMapper.map(post, PostDto.class))
-                .collect(Collectors.toList());
-    }
+                .toList();
+   }
 
     @Override
     public Iterable<PostDto> findPostsByPeriod(LocalDate dateFrom, LocalDate dateTo) {
-        return postRepository.findByDateCreated(dateFrom.atStartOfDay(), dateTo.atTime(LocalTime.MAX)).stream()
+//        return postRepository.findByDateCreated(dateFrom.atStartOfDay(), dateTo.atTime(LocalTime.MAX)).stream()
+//                .map(post -> modelMapper.map(post, PostDto.class))
+//                .collect(Collectors.toList());
+        return postRepository.findPostsByDateCreatedBetween(dateFrom, dateTo)
                 .map(post -> modelMapper.map(post, PostDto.class))
-                .collect(Collectors.toList());
+                .toList();
+
     }
 }
