@@ -5,6 +5,7 @@ import ait.cohort55.accounting.dto.RolesDto;
 import ait.cohort55.accounting.dto.UserDto;
 import ait.cohort55.accounting.dto.UserEditDto;
 import ait.cohort55.accounting.dto.UserRegisterDto;
+import ait.cohort55.accounting.dto.exception.InvalidDataException;
 import ait.cohort55.accounting.dto.exception.UserExistsException;
 import ait.cohort55.accounting.dto.exception.UserNotfoundException;
 import ait.cohort55.accounting.model.UserAccount;
@@ -65,13 +66,13 @@ public class UserAccountServiceImpl implements UserAccountService {
         boolean changeRole;
         try {
             if (isAddRole) {
-                changeRole = userAccount.addRole(role.toUpperCase());
+                changeRole = userAccount.addRole(role);
 
             }else {
-                changeRole = userAccount.getRoles().remove(role);
+                changeRole = userAccount.removeRole(role);
             }
-        }catch (IllegalArgumentException e){
-            throw new IllegalArgumentException();
+        }catch (Exception e){
+            throw new InvalidDataException("Bad role mame:" + role);
         }
         if (changeRole) {
             userAccountRepository.save(userAccount);
@@ -81,6 +82,10 @@ public class UserAccountServiceImpl implements UserAccountService {
 
     @Override
     public void changePassword(String login, String newPassword) {
+        UserAccount userAccount = userAccountRepository.findById(login).orElseThrow(UserNotfoundException::new);
+        String password = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+        userAccount.setPassword(password);
+        userAccountRepository.save(userAccount);
 
     }
 }
