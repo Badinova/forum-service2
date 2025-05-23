@@ -1,17 +1,21 @@
 package ait.cohort55.security;
 
 import ait.cohort55.accounting.model.Role;
-import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorityAuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
 
 @Configuration
-public class SequrityConfiguration {
+@RequiredArgsConstructor
+public class SecurityConfiguration {
+    private final CastomWebSecurity webSecurity;
 
     @Bean
     SecurityFilterChain getSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -29,6 +33,17 @@ public class SequrityConfiguration {
                 .access(new WebExpressionAuthorizationManager("#autor == authentication.name"))
                 .requestMatchers(HttpMethod.PATCH, "/forum/post/{id}/comment/{author}")
                 .access(new WebExpressionAuthorizationManager("#author == authentication.name"))
+                .requestMatchers(HttpMethod.PATCH, "/forum/post/{id}")
+                .access(((authentication, context) ->
+                        new AuthorizationDecision(webSecurity.checkPostAuthor(context.getVariables().get("id"),
+                                authentication.get().getName()))))
+                .requestMatchers(HttpMethod.DELETE, "/forum/post/{id}")
+                .access((authentication, context) -> {
+                    boolean  checkAuthor= webSecurity.checkPostAuthor(context.getVariables().get("id"),
+                            authentication.get().getName());
+                    boolean checkModerator = context.getRequest().isUserInRole(Role.MODERATOR.name());
+                    return new AuthorizationDecision(checkAuthor || checkModerator);
+                })
                 .anyRequest()
                 .authenticated());
 
